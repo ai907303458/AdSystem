@@ -7,4 +7,4 @@
 
 void onTrackbarSlide(int pos);
 int getAVIFrames(char * fname);
-void playVideo(char *path);
+int playVideo(char *path);

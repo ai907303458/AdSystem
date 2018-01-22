@@ -238,16 +238,16 @@ void HOG_SVM_Detect2()
 3、SVM分类。
 4、将识别结果标出
 */
-void RGB2HSV_SVM(){
+void RGB2HSV_SVM(int imgNo){
 
 	char path[512];
 	CvSVM classifier;//载入分类器  
 	cout << "导入SVM训练结果" << endl;
 	classifier.load("F:/picture/GTSRB/Final_Training/train.xml");//路径 
 	cout << "导入完成，开始分类图片" << endl;
-	for (int k = 1; k <= 120; k++)//k为测试图片数量  
+	for (int k = 1; k <= imgNo; k++)//k为测试图片数量  
 	{
-		sprintf_s(path, "F:\\picture\\GTSRB\\Final_Test\\raw\\%d.jpg", k);
+		sprintf_s(path, "F:/picture/test/test%d.jpg", k);
 		cout << "分类第" << k << "张图片" << endl;
 		Mat src = imread(path);
 		Mat copy;
@@ -346,7 +346,7 @@ void RGB2HSV_SVM(){
 			//putText(src, labelname[result], cvPoint(boundRect[i].x, boundRect[i].y - 10), 1, 1, CV_RGB(255, 0, 0), 2);//红色字体注释  
 			//circle( drawing, center[i], (int)radius[i], color, 2, 8, 0 );  
 			//sprintf_s(path, "E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\extractAndPredict\\image\\result/%d_%d.jpg", k, count1);  
-			sprintf_s(path, "F:\\picture\\GTSRB\\Final_Test\\Test_Result\\%d_%d.jpg", k, count++);
+			sprintf_s(path, "F:/picture/test/Test_Result/%d_%d.jpg", k, count++);
 			imwrite(path, src);//保存最终的检测识别结果
 		}
 		cout << "分类第" << k << "张图片完成" << endl;
@@ -359,7 +359,7 @@ void RGB2HSV_SVM(){
 /**
 	调用NormalizeImage归一化RGB图片
 	*/
-void NRGB(char *path){
+void showNRGB(char *path){
 	IplImage *img;
 	img = cvLoadImage(path);
 	cvNamedWindow("showNRGB", CV_WINDOW_AUTOSIZE);
@@ -368,19 +368,30 @@ void NRGB(char *path){
 	cvReleaseImage(&img);
 	cvDestroyWindow("showNRGB");
 }
+/**
+调用NormalizeImage归一化RGB图片
+*/
+void saveNRGB(char *spath,char *tpath){
+	IplImage *img;
+	img = cvLoadImage(spath);
+	cout << "保存归一化图片" << endl;
+	cvSaveImage(tpath, NormalizeImage(img));
+	cvReleaseImage(&img);
+}
 
 int main()
 {
-	//char *path = "F:/picture/GTSRB/Final_Test/raw/62.jpg";
-	//NRGB(path);
+	
 	//计算程序运行时间
 	clock_t start, finish;
 	double totaltime;
 	start = clock();
-
-	char *path = "F:/picture/DCIM/WKA01024.avi";
-	playVideo(path);                    
-
+	//char *path = "F:/picture/test/test2.jpg";
+	//saveNRGB(path);
+	char *path = "F:/picture/AVI/WKA00974.mp4";
+	int count=playVideo(path); 
+	//cout << count << endl;
+	RGB2HSV_SVM(count);
 	finish = clock();
 	totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
 	cout << "\n此程序的运行时间为" << totaltime << "秒！" << endl;

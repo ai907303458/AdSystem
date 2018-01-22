@@ -1,6 +1,6 @@
 #include "tool.h"
 
-CvSVM classifier;//定义分类器  
+  
 /*
 	将图片从RGB转到HSV颜色空间
 */
@@ -148,13 +148,13 @@ IplImage* NormalizeImage(IplImage *img)
 /*
 	载入分类器
 */
-void LoadSVM(char *train_path){
-
-	cout << "导入SVM训练结果" << endl;
-	classifier.load(train_path);//路径 
-	//classifier.load("F:/picture/GTSRB/Final_Training/train.xml");//路径 
-	cout << "导入完成，开始分类图片" << endl;
-}
+//void LoadSVM(char *train_path){
+//
+//	cout << "导入SVM训练结果" << endl;
+//	classifier.load(train_path);//路径 
+//	//classifier.load("F:/picture/GTSRB/Final_Training/train.xml");//路径 
+//	cout << "导入完成，开始分类图片" << endl;
+//}
 /*
 	对一张图片进行分类
 */
@@ -214,7 +214,7 @@ void RGB2HSV_SVM(char *path){
 		minEnclosingCircle(contours_poly[i], center[i], radius[i]);//计算并返回包围轮廓点集的最小圆形及其半径  
 	}
 	Mat drawing = Mat::zeros(matRgb.size(), CV_8UC3);
-	int count = 0;
+	int count = 1;
 	for (int i = 0; i < contours.size(); i++)
 	{
 		Rect rect = boundRect[i];
@@ -249,6 +249,8 @@ void RGB2HSV_SVM(char *path){
 		temp2.convertTo(temp2, CV_32F);
 		cout << temp2.size() << endl;
 
+		CvSVM classifier;//定义分类器
+		classifier.load("F:/picture/GTSRB/Final_Training/train.xml");
 		int result = (int)classifier.predict(temp2) - 1;//svm预测  
 		Scalar color = (0, 0, 255);//蓝色线画轮廓   
 		drawContours(drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
@@ -257,7 +259,7 @@ void RGB2HSV_SVM(char *path){
 		//putText(src, labelname[result], cvPoint(boundRect[i].x, boundRect[i].y - 10), 1, 1, CV_RGB(255, 0, 0), 2);//红色字体注释  
 		//circle( drawing, center[i], (int)radius[i], color, 2, 8, 0 );  
 		//sprintf_s(path, "E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\extractAndPredict\\image\\result/%d_%d.jpg", k, count1);  
-		//sprintf_s(path, "F:\\picture\\GTSRB\\Final_Test\\Test_Result\\%d_%d.jpg", 1, count++);
+		//sprintf_s(path, "F:\\picture\\test\\Test_Result\\%d_%d.jpg", 1, count++);
 		imwrite(path, src);//保存最终的检测识别结果
 	}
 	cout << "分类图片完成" << endl; 

@@ -34,7 +34,7 @@ int getAVIFrames(char * fname) {
 }
 
 
-void playVideo(char *path) {
+int playVideo(char *path) {
 	cvNamedWindow("Test", CV_WINDOW_AUTOSIZE);
 	g_capture = cvCreateFileCapture(path);
 	IplImage *foo = cvQueryFrame(g_capture);
@@ -66,6 +66,7 @@ void playVideo(char *path) {
 
 	IplImage* frame;
 	frames = 0;
+	int count = 0;
 	char tpath[512];
 	cout << "开始处理" << endl;
 	while (1) {
@@ -75,20 +76,21 @@ void playVideo(char *path) {
 		//printf("\nFrame number=%d\n", frames);
 		//cvSetTrackbarPos("Position", "Example2_3", frames);
 		frames++;
-		if (frames % 5 == 0){
+		if (frames % 20 == 0){
 			// 将帧转成图片输出  
 			cout << "保存第" <<frames<<"帧"<< endl;
-			sprintf_s(tpath, "F:/picture/test/test%d.jpg", frames);
-			
-			cvSaveImage(tpath, frame);
-			cout << "开始分类第" << frames << "帧" << endl;
-			RGB2HSV_SVM(tpath);
-			cout << "第" << frames << "分类完成帧" << endl;
+			sprintf_s(tpath, "F:/picture/test/test%d.jpg", ++count);
+			cvSaveImage(tpath, NormalizeImage(frame));
+			//cvSaveImage(tpath, frame);
+			//cout << "开始分类第" << frames << "帧" << endl;
+			//RGB2HSV_SVM(tpath);
+			//cout << "第" << frames << "分类完成帧" << endl;
 		}
-		//cvShowImage("Test", frame);
+		cvShowImage("Test", frame);
 		char c = (char)cvWaitKey(10);
 		if (c == 27) break;
 	}
 	cvReleaseCapture(&g_capture);
 	cvDestroyWindow("Test");
+	return count;
 }
