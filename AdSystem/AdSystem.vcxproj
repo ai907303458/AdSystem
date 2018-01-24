@@ -82,12 +82,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="tool.cpp" />
-    <ClCompile Include="Video.cpp" />
+    <ClCompile Include="Picture_Tool.cpp" />
+    <ClCompile Include="Video_Tool.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tool.h" />
-    <ClInclude Include="Video.h" />
+    <ClInclude Include="Picture_Tool.h" />
+    <ClInclude Include="Video_Tool.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

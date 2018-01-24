@@ -35,3 +35,5 @@
 *.opensdf
 
 /Debug
+
+*.tlog/

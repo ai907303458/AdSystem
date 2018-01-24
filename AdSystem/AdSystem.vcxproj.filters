@@ -15,21 +15,21 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="tool.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="Video.cpp">
+    <ClCompile Include="Picture_Tool.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="Video_Tool.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tool.h">
+    <ClInclude Include="Picture_Tool.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="Video.h">
+    <ClInclude Include="Video_Tool.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

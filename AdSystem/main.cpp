@@ -1,10 +1,19 @@
-#include "tool.h"
-#include "Video.h"
+#include "Picture_Tool.h"
+#include "Video_Tool.h"
+
+#define VIDEO_PATH "F:/picture/AVI/WKA00925_1.mp4"
+#define SVM_PATH "F:/picture/Round_Sign/train.xml"
+#define Train_PATH "F:/picture/Round_Sign/train.txt"
+string labelname[500] = { "Around", "Forb_Drin", "Forb_Left", "Forb_Park", "Forb_right", "FororLeft", "Fororright", "Forward", "Left", "Right", "Splim100", "Splim120", "Splim20", "Splim30", "Splim50", "Splim60", "Splim70", "Splim80", "Turn_Left", "Turn_Right" };
+RNG rng(12345);
+CvSVM classifier;//分类器声明
+
+
 
 /*
 训练SVM分类器。
 */
-void Train_SVM()
+void Train_SVM(char *train_path, char *result_path)
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -13,7 +22,7 @@ void Train_SVM()
 	vector<int> imgTrainLabel;
 	int nLine = 0;
 	string buf;
-	ifstream imagePath("F:\\picture\\GTSRB\\Final_Training\\train.txt");//训练数据位置  
+	ifstream imagePath(train_path);//训练数据位置  
 	unsigned long n;
 
 	while (imagePath)//读取训练样本，imageName.txt一行为路径，一行为标签，循环      
@@ -77,7 +86,7 @@ void Train_SVM()
 	clock_t finish = clock();
 	double consumeTime = (double)(finish - start);
 	cout << "svm训练结束,用时" << consumeTime << endl;
-	svm.save("F:\\picture\\GTSRB\\Final_Training\\train.xml");//训练结果存储位置  
+	svm.save(result_path);//训练结果存储位置  
 	cvReleaseMat(&imgDataMat);
 	cvReleaseMat(&imgLabelMat);
 
@@ -91,7 +100,7 @@ void Train_SVM()
 1、根据图片的路径来分类图片,
 2、并将结果保存到predictResult.txt文件中
 */
-void HOG_SVM_Detect1()
+void HOG_SVM_Recognize1()
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -159,7 +168,7 @@ void HOG_SVM_Detect1()
 2、并将结果保存到predictResult.txt文件中，
 3、并计算分类成功率
 */
-void HOG_SVM_Detect2()
+void HOG_SVM_Recognize2()
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -232,19 +241,51 @@ void HOG_SVM_Detect2()
 }
 
 /*
+	对一张图片进行识别
+*/
+void HOG_SVM_Recog(char *img_path)
+{
+	int imgWidht = 48;//重新定义图片大小48*48  
+	int imgHeight = 48;
+	IplImage *testImg;
+	testImg = cvLoadImage(img_path, 1);
+	if (testImg == NULL)
+	{
+		cout << "图片读取错误 " << img_path << endl;
+		exit(0);
+	}
+
+	IplImage* trainImg = cvCreateImage(cvSize(imgWidht, imgHeight), 8, 3);
+	cvZero(trainImg);
+	cvResize(testImg, trainImg);
+	//提取HOG特征
+	HOGDescriptor *hog = new HOGDescriptor(cvSize(imgWidht, imgHeight), cvSize(16, 16), cvSize(8, 8), cvSize(8, 8), 9);//hog特征训练  
+	vector<float> descriptors;//数组的结果         
+	hog->compute(trainImg, descriptors, Size(1, 1), Size(0, 0)); //开始计算         
+	cout << "HOG dims: " << descriptors.size() << endl;
+	CvMat* svmTrainMat = cvCreateMat(1, descriptors.size(), CV_32FC1);
+	unsigned long n = 0;
+	for (vector<float>::iterator iter = descriptors.begin(); iter != descriptors.end(); iter++)
+	{
+		cvmSet(svmTrainMat, 0, n, *iter);
+		n++;
+	}
+	//对图片进行预测
+	int ret = classifier.predict(svmTrainMat);
+	//此处先暂时输出标号，之后写个对应表。
+	cout << "图片处理完成，图片为："<<ret << endl;
+}
+
+/*
 标志牌的检测与识别，使用颜色进行定位，SVM分类
 1、图像预处理，RGB转HSV
 2、通过膨胀定位
 3、SVM分类。
 4、将识别结果标出
 */
-void RGB2HSV_SVM(int imgNo){
+void RGB2HSV_SVM(int imgNo, Picture_Tool picturetool) {
 
 	char path[512];
-	CvSVM classifier;//载入分类器  
-	cout << "导入SVM训练结果" << endl;
-	classifier.load("F:/picture/GTSRB/Final_Training/train.xml");//路径 
-	cout << "导入完成，开始分类图片" << endl;
 	for (int k = 1; k <= imgNo; k++)//k为测试图片数量  
 	{
 		sprintf_s(path, "F:/picture/test/test%d.jpg", k);
@@ -266,7 +307,7 @@ void RGB2HSV_SVM(int imgNo){
 				B = src.at<Vec3b>(y, x)[0];
 				G = src.at<Vec3b>(y, x)[1];
 				R = src.at<Vec3b>(y, x)[2];
-				RGB2HSV(R, G, B, H, S, V);
+				picturetool.RGB2HSV(R, G, B, H, S, V);
 				//红色：337-360  
 				if ((H >= 337 && H <= 360 || H >= 0 && H <= 10) && S >= 12 && S <= 100 && V>20 && V < 99)
 				{
@@ -284,13 +325,14 @@ void RGB2HSV_SVM(int imgNo){
 		//imshow("erode", Mat_rgb);  
 		dilate(matRgb, matRgb, element1);//膨胀  
 		//imshow("dilate", Mat_rgb);  
-		FillHole(matRgb, matRgb);//填充   
+		picturetool.FillHole(matRgb, matRgb);//填充   
 		//imshow("fillHole", Mat_rgb);  
 		matRgb.copyTo(Mat_rgb_copy);
-		vector<vector<Point> > contours;//轮廓  
+		vector<vector<Point> > contours;//轮廓 
 		vector<Vec4i> hierarchy;//分层  
 		findContours(matRgb, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
-		/// 多边形逼近轮廓 + 获取矩形和圆形边界框  
+		// 多边形逼近轮廓 + 获取矩形和圆形边界框  
+		cout << "contours: " << contours.size() << endl;
 		vector<vector<Point> > contours_poly(contours.size());//近似后的轮廓点集   
 		vector<Rect> boundRect(contours.size()); //包围点集的最小矩形vector    
 		vector<Point2f>center(contours.size());//包围点集的最小圆形vector   
@@ -327,8 +369,15 @@ void RGB2HSV_SVM(int imgNo){
 			Mat temp;
 			copy(rect).copyTo(temp);
 			//imshow("test2",temp);//显示从场景图中提取出的标识，留着。  
-
-			copy(rect).copyTo(roiImage);
+			/*bool iscircle = picturetool.isCircle(roiImage, temp);
+			cout << "circle:" << iscircle << endl;
+			if (!iscircle)
+				continue;*/
+			//接下来是形状限制！这里检测圆形标志牌
+			//float C = (4 * PI*dConArea) / (dConLen*dConLen);
+			//if (C < 0.5)//利用圆度初步对形状进行筛选
+			//	continue;
+			//copy(rect).copyTo(roiImage);
 			//*********svm*********  
 			Mat temp2 = Mat::zeros(temp.size(), CV_8UC1);
 			cvtColor(temp, temp2, CV_BGR2GRAY);
@@ -343,9 +392,8 @@ void RGB2HSV_SVM(int imgNo){
 			drawContours(drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
 			rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
 			rectangle(src, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
-			//putText(src, labelname[result], cvPoint(boundRect[i].x, boundRect[i].y - 10), 1, 1, CV_RGB(255, 0, 0), 2);//红色字体注释  
-			//circle( drawing, center[i], (int)radius[i], color, 2, 8, 0 );  
-			//sprintf_s(path, "E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\extractAndPredict\\image\\result/%d_%d.jpg", k, count1);  
+			putText(src, labelname[result], cvPoint(boundRect[i].x, boundRect[i].y - 10), 1, 1, CV_RGB(255, 0, 0), 2);//红色字体注释  
+		    //保存
 			sprintf_s(path, "F:/picture/test/Test_Result/%d_%d.jpg", k, count++);
 			imwrite(path, src);//保存最终的检测识别结果
 		}
@@ -356,42 +404,87 @@ void RGB2HSV_SVM(int imgNo){
 	waitKey(0);
 }
 
-/**
-	调用NormalizeImage归一化RGB图片
-	*/
-void showNRGB(char *path){
-	IplImage *img;
-	img = cvLoadImage(path);
-	cvNamedWindow("showNRGB", CV_WINDOW_AUTOSIZE);
-	cvShowImage("showNRGB", NormalizeImage(img));
-	cvWaitKey(0);
-	cvReleaseImage(&img);
-	cvDestroyWindow("showNRGB");
-}
-/**
-调用NormalizeImage归一化RGB图片
-*/
-void saveNRGB(char *spath,char *tpath){
-	IplImage *img;
-	img = cvLoadImage(spath);
-	cout << "保存归一化图片" << endl;
-	cvSaveImage(tpath, NormalizeImage(img));
-	cvReleaseImage(&img);
+
+//载入训练好的svm分类器
+void load_svm()
+{
+	cout << "导入SVM训练结果" << endl;
+	classifier.load(SVM_PATH);//路径 
+	cout << "导入完成" << endl;
 }
 
+
+IplImage *g_pGrayImage = NULL;
+IplImage *g_pBinaryImage = NULL;
+char *pstrWindowsBinaryTitle = "二值图";
+void on_trackbar(int pos)
+{
+	// 转为二值图  
+	cvThreshold(g_pGrayImage, g_pBinaryImage, pos, 255, CV_THRESH_BINARY);
+	// 显示二值图  
+	cvShowImage(pstrWindowsBinaryTitle, g_pBinaryImage);
+	
+}
+void test(char* path){
+	
+	char *pstrWindowsToolBarName = "二值图阈值";
+
+	// 从文件中加载原图  
+	IplImage *pSrcImage = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
+
+	// 转为灰度图  
+	g_pGrayImage = cvCreateImage(cvGetSize(pSrcImage), IPL_DEPTH_8U, 1);
+	cvCvtColor(pSrcImage, g_pGrayImage, CV_BGR2GRAY);
+
+	// 创建二值图  
+	g_pBinaryImage = cvCreateImage(cvGetSize(g_pGrayImage), IPL_DEPTH_8U, 1);
+
+	
+	// 创建二值图窗口  
+	cvNamedWindow(pstrWindowsBinaryTitle, CV_WINDOW_AUTOSIZE);
+
+	// 滑动条    
+	int nThreshold = 0;
+	cvCreateTrackbar(pstrWindowsToolBarName, pstrWindowsBinaryTitle, &nThreshold, 254, on_trackbar);
+
+	on_trackbar(1);
+
+	cvWaitKey(0);
+
+	cvDestroyWindow(pstrWindowsBinaryTitle);
+	cvReleaseImage(&pSrcImage);
+	cvReleaseImage(&g_pGrayImage);
+	cvReleaseImage(&g_pBinaryImage);
+}
 int main()
 {
-	
+	//load_svm();
 	//计算程序运行时间
 	clock_t start, finish;
 	double totaltime;
 	start = clock();
-	//char *path = "F:/picture/test/test2.jpg";
+	//VideoTool videotool;
+	Picture_Tool picturetool;
+	//训练HOG+SVM
+	//char *train_path = Train_PATH;
+	//char *result_path = SVM_PATH;
+	//Train_SVM(train_path, result_path);
+
+	char *path = "F:/picture/test/test5.jpg";
 	//saveNRGB(path);
-	char *path = "F:/picture/AVI/WKA00974.mp4";
-	int count=playVideo(path); 
-	//cout << count << endl;
-	RGB2HSV_SVM(count);
+	IplImage *testImg;
+	testImg = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
+	cvShowImage("hahah", testImg);
+	//IplImage *img = picturetool.twoValueImage(testImg, 0.12);
+	//char *path = VIDEO_PATH;
+	//int count = videotool.playVideo(path, picturetool);
+	//cout << "count " << count << endl;
+	//RGB2HSV_SVM(count, picturetool);
+	//cvShowImage("erzhitu",img);
+	//识别单张图片
+	//HOG_SVM_Recog(path);
+	waitKey(0);
+	//test(path);
 	finish = clock();
 	totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
 	cout << "\n此程序的运行时间为" << totaltime << "秒！" << endl;
