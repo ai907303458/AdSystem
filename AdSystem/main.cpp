@@ -2,8 +2,9 @@
 #include "Video_Tool.h"
 
 #define VIDEO_PATH "F:/picture/AVI/WKA00925_1.mp4"
-#define SVM_PATH "F:/picture/Round_Sign/train.xml"
+#define SVM_PATH "F:/picture/Round_Sign/Round_Sign/train.xml"
 #define Train_PATH "F:/picture/Round_Sign/train.txt"
+#define Test_PATH "F:/picture/Round_Sign/Test/train.txt"
 string labelname[500] = { "Around", "Forb_Drin", "Forb_Left", "Forb_Park", "Forb_right", "FororLeft", "Fororright", "Forward", "Left", "Right", "Splim100", "Splim120", "Splim20", "Splim30", "Splim50", "Splim60", "Splim70", "Splim80", "Turn_Left", "Turn_Right" };
 RNG rng(12345);
 CvSVM classifier;//分类器声明
@@ -93,7 +94,13 @@ void Train_SVM(char *train_path, char *result_path)
 	system("pause");
 	//return 0;
 }
-
+//载入训练好的svm分类器
+void load_svm()
+{
+	cout << "导入SVM训练结果" << endl;
+	classifier.load(SVM_PATH);//路径 
+	cout << "导入完成" << endl;
+}
 /*
 使用HOG特征与SVM进行分类，输入图片是已定位好的标志牌，
 此函数的作用是检测特征与分类的效果。
@@ -168,7 +175,7 @@ void HOG_SVM_Recognize1()
 2、并将结果保存到predictResult.txt文件中，
 3、并计算分类成功率
 */
-void HOG_SVM_Recognize2()
+void HOG_SVM_Recognize2(char *path)
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -178,7 +185,7 @@ void HOG_SVM_Recognize2()
 	vector<int> predictTestImgLabel;
 	int predictRightNum = 0;
 	double predictRightRatio;
-	ifstream readTestImgPath("E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\test\\imageNameRandom.txt");//读取测试图片路径，txt文件为图片路径名称  
+	ifstream readTestImgPath(path);//读取测试图片路径，txt文件为图片路径名称  
 	string buf;
 	int nLine = 0;
 	while (readTestImgPath)
@@ -195,7 +202,7 @@ void HOG_SVM_Recognize2()
 	readTestImgPath.close();
 
 	char line[512];
-	ofstream predictResultPath("E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\test\\predictResultRandom.txt");//预测结果存储在此文本     
+	ofstream predictResultPath("F:/picture/Round_Sign/Test/predictResultRandom.txt");//预测结果存储在此文本     
 	for (string::size_type j = 0; j != testImgPath.size(); j++)//读取测试图片      
 	{
 		testImg = cvLoadImage(testImgPath[j].c_str(), 1);
@@ -220,9 +227,7 @@ void HOG_SVM_Recognize2()
 			n++;
 		}
 
-		CvSVM svm;//新建SVM  
-		svm.load("E:\\vs2013\\opencv_code\\GTSRBtrafficSign\\train\\train.xml");
-		int ret = svm.predict(svmTrainMat);
+		int ret = classifier.predict(svmTrainMat);
 		predictTestImgLabel.push_back(ret);
 		sprintf(line, "%s %d\r\n", testImgPath[j].c_str(), ret);
 		predictResultPath << line;
@@ -405,13 +410,7 @@ void RGB2HSV_SVM(int imgNo, Picture_Tool picturetool) {
 }
 
 
-//载入训练好的svm分类器
-void load_svm()
-{
-	cout << "导入SVM训练结果" << endl;
-	classifier.load(SVM_PATH);//路径 
-	cout << "导入完成" << endl;
-}
+
 
 
 IplImage *g_pGrayImage = NULL;
@@ -458,23 +457,23 @@ void test(char* path){
 }
 int main()
 {
-	//load_svm();
+	load_svm();
 	//计算程序运行时间
 	clock_t start, finish;
 	double totaltime;
 	start = clock();
-	//VideoTool videotool;
+	VideoTool videotool;
 	Picture_Tool picturetool;
 	//训练HOG+SVM
 	//char *train_path = Train_PATH;
 	//char *result_path = SVM_PATH;
 	//Train_SVM(train_path, result_path);
 
-	char *path = "F:/picture/test/test5.jpg";
+	//char *path = "F:/picture/test/test5.jpg";
 	//saveNRGB(path);
-	IplImage *testImg;
-	testImg = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
-	cvShowImage("hahah", testImg);
+	//IplImage *testImg;
+	//testImg = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
+	//cvShowImage("hahah", testImg);
 	//IplImage *img = picturetool.twoValueImage(testImg, 0.12);
 	//char *path = VIDEO_PATH;
 	//int count = videotool.playVideo(path, picturetool);
@@ -483,7 +482,9 @@ int main()
 	//cvShowImage("erzhitu",img);
 	//识别单张图片
 	//HOG_SVM_Recog(path);
-	waitKey(0);
+	char *test_path = Test_PATH;
+	HOG_SVM_Recognize2(test_path);
+	//waitKey(0);
 	//test(path);
 	finish = clock();
 	totaltime = (double)(finish - start) / CLOCKS_PER_SEC;

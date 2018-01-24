@@ -63,7 +63,6 @@ IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
 	int width = img->width;
 	int height = img->height;
 	int redValue, greenValue, blueValue;
-	double epslon = 0.000001;
 
 	//3计算归一化的结果，并替换掉原像素值；
 	uchar* piexl = new uchar;
