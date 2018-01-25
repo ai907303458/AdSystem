@@ -2,14 +2,12 @@
 #include "Video_Tool.h"
 
 #define VIDEO_PATH "F:/picture/AVI/WKA00925_1.mp4"
-#define SVM_PATH "F:/picture/Round_Sign/Round_Sign/train.xml"
+#define SVM_PATH "F:/picture/Round_Sign/train.xml"
 #define Train_PATH "F:/picture/Round_Sign/train.txt"
 #define Test_PATH "F:/picture/Round_Sign/Test/train.txt"
 string labelname[500] = { "Around", "Forb_Drin", "Forb_Left", "Forb_Park", "Forb_right", "FororLeft", "Fororright", "Forward", "Left", "Right", "Splim100", "Splim120", "Splim20", "Splim30", "Splim50", "Splim60", "Splim70", "Splim80", "Turn_Left", "Turn_Right" };
 RNG rng(12345);
 CvSVM classifier;//分类器声明
-
-
 
 /*
 训练SVM分类器。
@@ -101,73 +99,6 @@ void load_svm()
 	classifier.load(SVM_PATH);//路径 
 	cout << "导入完成" << endl;
 }
-/*
-使用HOG特征与SVM进行分类，输入图片是已定位好的标志牌，
-此函数的作用是检测特征与分类的效果。
-1、根据图片的路径来分类图片,
-2、并将结果保存到predictResult.txt文件中
-*/
-void HOG_SVM_Recognize1()
-{
-	int imgWidht = 48;//重新定义图片大小48*48  
-	int imgHeight = 48;
-	IplImage *testImg;
-	vector<string> testImgPath;//测试图片的路径  
-	vector<int> realTestImgLabel;
-	vector<int> predictTestImgLabel;
-	int predictRightNum = 0;
-	double predictRightRatio;
-	ifstream readTestImgPath("F:/picture/GTSRB/Final_Test/Test.txt");//读取测试图片路径，txt文件为图片路径名称  
-	string buf;
-	int nLine = 0;
-	cout << "图片路径加载" << endl;
-	while (readTestImgPath)
-	{
-		if (getline(readTestImgPath, buf))
-		{
-			testImgPath.push_back(buf);//存路径  
-		}
-	}
-	readTestImgPath.close();
-	cout << "图片路径加载完成" << endl;
-	char line[512];
-	ofstream predictResultPath("F:/picture/GTSRB/Final_Test/predictResult.txt");//预测结果存储在此文本     
-	for (string::size_type j = 0; j != testImgPath.size(); j++)//读取测试图片      
-	{
-		cout << "读取第" << j + 1 << "张图片" << endl;
-		testImg = cvLoadImage(testImgPath[j].c_str(), 1);
-		if (testImg == NULL)
-		{
-			cout << "图片读取错误 " << testImgPath[j].c_str() << endl;
-			continue;
-		}
-
-		IplImage* trainImg = cvCreateImage(cvSize(imgWidht, imgHeight), 8, 3);
-		cvZero(trainImg);
-		cvResize(testImg, trainImg);
-		HOGDescriptor *hog = new HOGDescriptor(cvSize(imgWidht, imgHeight), cvSize(16, 16), cvSize(8, 8), cvSize(8, 8), 9);//hog特征训练  
-		vector<float> descriptors;//数组的结果         
-		hog->compute(trainImg, descriptors, Size(1, 1), Size(0, 0)); //开始计算         
-		cout << "HOG dims: " << descriptors.size() << endl;
-		CvMat* svmTrainMat = cvCreateMat(1, descriptors.size(), CV_32FC1);
-		unsigned long n = 0;
-		for (vector<float>::iterator iter = descriptors.begin(); iter != descriptors.end(); iter++)
-		{
-			cvmSet(svmTrainMat, 0, n, *iter);
-			n++;
-		}
-		CvSVM svm;//新建SVM  
-		svm.load("F:/picture/GTSRB/Final_Training/train.xml");
-		int ret = svm.predict(svmTrainMat);
-		predictTestImgLabel.push_back(ret);
-		sprintf(line, "%s %d\r\n", testImgPath[j].c_str(), ret);
-		predictResultPath << line;
-		cout << "第" << j + 1 << "张图片处理完成" << endl;
-	}
-	predictResultPath.close();
-	cout << "图片处理完成" << endl;
-	system("pause");
-}
 
 /**
 使用HOG特征与SVM进行分类并计算准确率，此函数的作用是检测特征与分类的效果。
@@ -175,7 +106,7 @@ void HOG_SVM_Recognize1()
 2、并将结果保存到predictResult.txt文件中，
 3、并计算分类成功率
 */
-void HOG_SVM_Recognize2(char *path)
+void HOG_SVM_MulRecog(char *path)
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -200,10 +131,9 @@ void HOG_SVM_Recognize2(char *path)
 		}
 	}
 	readTestImgPath.close();
-
 	char line[512];
 	ofstream predictResultPath("F:/picture/Round_Sign/Test/predictResultRandom.txt");//预测结果存储在此文本     
-	for (string::size_type j = 0; j != testImgPath.size(); j++)//读取测试图片      
+	for (int j = 0; j < testImgPath.size(); j++)//读取测试图片      
 	{
 		testImg = cvLoadImage(testImgPath[j].c_str(), 1);
 		if (testImg == NULL)
@@ -218,7 +148,7 @@ void HOG_SVM_Recognize2(char *path)
 		HOGDescriptor *hog = new HOGDescriptor(cvSize(imgWidht, imgHeight), cvSize(16, 16), cvSize(8, 8), cvSize(8, 8), 9);//hog特征训练  
 		vector<float> descriptors;//数组的结果         
 		hog->compute(trainImg, descriptors, Size(1, 1), Size(0, 0)); //开始计算         
-		cout << "HOG dims: " << descriptors.size() << endl;
+		//cout << "HOG dims: " << descriptors.size() << endl;
 		CvMat* svmTrainMat = cvCreateMat(1, descriptors.size(), CV_32FC1);
 		unsigned long n = 0;
 		for (vector<float>::iterator iter = descriptors.begin(); iter != descriptors.end(); iter++)
@@ -226,29 +156,31 @@ void HOG_SVM_Recognize2(char *path)
 			cvmSet(svmTrainMat, 0, n, *iter);
 			n++;
 		}
-
+		//预测
 		int ret = classifier.predict(svmTrainMat);
-		predictTestImgLabel.push_back(ret);
 		sprintf(line, "%s %d\r\n", testImgPath[j].c_str(), ret);
 		predictResultPath << line;
+
+		if (hog != NULL)
+		{
+			delete hog;
+			hog = NULL;
+		}
 	}
 	predictResultPath.close();
-
-	for (string::size_type i = 0; i < realTestImgLabel.size(); i++)
+	for (int i = 0; i < realTestImgLabel.size() && i<predictTestImgLabel.size(); i++)
 	{
 		if (realTestImgLabel[i] == predictTestImgLabel[i])//判断实际值与预测值是否相等  
 			predictRightNum++;
 	}
 	predictRightRatio = (double)predictRightNum / predictTestImgLabel.size();//计算预测正确的比例  
 	cout << "一共预测" << predictTestImgLabel.size() << "张图片," << "正确率为：" << predictRightRatio << endl;
-
-	system("pause");
 }
 
 /*
 	对一张图片进行识别
 */
-void HOG_SVM_Recog(char *img_path)
+void HOG_SVM_SinRecog(char *img_path)
 {
 	int imgWidht = 48;//重新定义图片大小48*48  
 	int imgHeight = 48;
@@ -277,8 +209,8 @@ void HOG_SVM_Recog(char *img_path)
 	}
 	//对图片进行预测
 	int ret = classifier.predict(svmTrainMat);
-	//此处先暂时输出标号，之后写个对应表。
-	cout << "图片处理完成，图片为："<<ret << endl;
+	//输出名称
+	cout << "图片处理完成，图片为：" << labelname[ret] << endl;
 }
 
 /*
@@ -409,52 +341,6 @@ void RGB2HSV_SVM(int imgNo, Picture_Tool picturetool) {
 	waitKey(0);
 }
 
-
-
-
-
-IplImage *g_pGrayImage = NULL;
-IplImage *g_pBinaryImage = NULL;
-char *pstrWindowsBinaryTitle = "二值图";
-void on_trackbar(int pos)
-{
-	// 转为二值图  
-	cvThreshold(g_pGrayImage, g_pBinaryImage, pos, 255, CV_THRESH_BINARY);
-	// 显示二值图  
-	cvShowImage(pstrWindowsBinaryTitle, g_pBinaryImage);
-	
-}
-void test(char* path){
-	
-	char *pstrWindowsToolBarName = "二值图阈值";
-
-	// 从文件中加载原图  
-	IplImage *pSrcImage = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
-
-	// 转为灰度图  
-	g_pGrayImage = cvCreateImage(cvGetSize(pSrcImage), IPL_DEPTH_8U, 1);
-	cvCvtColor(pSrcImage, g_pGrayImage, CV_BGR2GRAY);
-
-	// 创建二值图  
-	g_pBinaryImage = cvCreateImage(cvGetSize(g_pGrayImage), IPL_DEPTH_8U, 1);
-
-	
-	// 创建二值图窗口  
-	cvNamedWindow(pstrWindowsBinaryTitle, CV_WINDOW_AUTOSIZE);
-
-	// 滑动条    
-	int nThreshold = 0;
-	cvCreateTrackbar(pstrWindowsToolBarName, pstrWindowsBinaryTitle, &nThreshold, 254, on_trackbar);
-
-	on_trackbar(1);
-
-	cvWaitKey(0);
-
-	cvDestroyWindow(pstrWindowsBinaryTitle);
-	cvReleaseImage(&pSrcImage);
-	cvReleaseImage(&g_pGrayImage);
-	cvReleaseImage(&g_pBinaryImage);
-}
 int main()
 {
 	load_svm();
@@ -483,7 +369,8 @@ int main()
 	//识别单张图片
 	//HOG_SVM_Recog(path);
 	char *test_path = Test_PATH;
-	HOG_SVM_Recognize2(test_path);
+	//识别多张图片
+	//HOG_SVM_MulRecog(test_path);
 	//waitKey(0);
 	//test(path);
 	finish = clock();
