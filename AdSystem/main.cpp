@@ -1,5 +1,6 @@
 #include "Picture_Tool.h"
 #include "Video_Tool.h"
+#include "ini_File.h"
 
 #define VIDEO_PATH "F:/picture/AVI/WKA00925_1.mp4"
 #define SVM_PATH "F:/picture/Round_Sign/train.xml"
@@ -337,30 +338,202 @@ void RGB2HSV_SVM(int imgNo, Picture_Tool picturetool) {
 		cout << "分类第" << k << "张图片完成" << endl;
 	}
 	cout << "分类完成" << endl;
-	//system("pause");
 	waitKey(0);
+}
+void Hough(Mat srcBw){
+
+	Mat edges;  //义转化的灰度图
+	namedWindow("效果图", CV_WINDOW_NORMAL);
+	
+	//cvtColor(srcBw, edges, CV_BGR2GRAY);
+	//高斯滤波
+	GaussianBlur(edges, edges, Size(7, 7), 2, 2);
+	vector<Vec3f> circles;
+	
+	//霍夫圆
+	HoughCircles(edges, circles, CV_HOUGH_GRADIENT, 1.5, 10, 200, 100, 0, 0);
+	for (size_t i = 0; i < circles.size(); i++)
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+	//	//绘制圆心  
+		circle(srcBw, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+	//	//绘制圆轮廓  
+		circle(srcBw, center, radius, Scalar(155, 50, 255), 3, 8, 0);
+	}
+	imshow("效果图", srcBw);
+
+	//waitKey(0);
+}
+/*
+标志牌的检测与识别，使用颜色进行定位，SVM分类
+1、图像预处理，RGB转HSV
+2、通过膨胀定位
+3、SVM分类。
+4、将识别结果标出
+*/
+void RGB2HSV_SVM_ONE(char* imgpath, Picture_Tool picturetool) {
+
+	char path[512];
+	Mat src = imread(imgpath);
+	Mat copy;
+	src.copyTo(copy);
+	int width = src.cols;   //图像宽度  
+	int height = src.rows;   //图像高度  
+	//色彩分割  
+	double B = 0.0, G = 0.0, R = 0.0, H = 0.0, S = 0.0, V = 0.0;
+	Mat matRgb = Mat::zeros(src.size(), CV_8UC1);
+	Mat Mat_rgb_copy;//一个暂存单元  
+	int x, y;
+	for (y = 0; y < height; y++)
+	{
+		for (x = 0; x<width; x++)
+		{
+			B = src.at<Vec3b>(y, x)[0];
+			G = src.at<Vec3b>(y, x)[1];
+			R = src.at<Vec3b>(y, x)[2];
+			picturetool.RGB2HSV(R, G, B, H, S, V);
+			//红色：337-360  
+			if ((H >= 337 && H <= 360 || H >= 0 && H <= 10) && S >= 12 && S <= 100 && V>20 && V < 99)
+			{
+				matRgb.at<uchar>(y, x) = 255;
+			}
+		}
+	}
+	namedWindow("MyWindow", CV_WINDOW_AUTOSIZE);
+	//imshow("MyWindow", matRgb);
+
+	medianBlur(matRgb, matRgb, 3);
+	//imshow("MyWindow", matRgb); 
+	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(2 * 1 + 1, 2 * 1 + 1), Point(1, 1));
+	Mat element1 = getStructuringElement(MORPH_ELLIPSE, Size(2 * 3 + 1, 2 * 3 + 1), Point(3, 3));
+	erode(matRgb, matRgb, element);//腐蚀  
+	//imshow("MyWindow", matRgb);
+	dilate(matRgb, matRgb, element1);//膨胀  
+	//imshow("MyWindow", matRgb);  
+	picturetool.FillHole(matRgb, matRgb);//填充 
+	Mat canSrc;
+	Canny(matRgb, matRgb, 10, 250, 5);
+	imshow("MyWindow", matRgb); 
+	//Hough(matRgb);
+	vector<Vec3f> circles;
+	HoughCircles(matRgb, circles, CV_HOUGH_GRADIENT, 1, 10, 200, 100, 0, 0);
+	cout << circles.size() << endl;
+	for (size_t i = 0; i < circles.size(); i++)
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+
+		int radius = cvRound(circles[i][2]);
+		//绘制圆心  
+		circle(src, center, 3, Scalar(0, 255, 0), -1, 8, 0);
+		//绘制圆轮廓  
+		circle(src, center, radius, Scalar(155, 50, 255), 3, 8, 0);
+	}
+	imshow("圆形检测", src);
+//	matRgb.copyTo(Mat_rgb_copy);
+//	vector<vector<Point> > contours;//轮廓 
+//	vector<Vec4i> hierarchy;//分层  
+//	findContours(matRgb, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE, Point(0, 0));
+//	// 多边形逼近轮廓 + 获取矩形和圆形边界框  
+//	//cout << "contours: " << contours.size() << endl;
+//	vector<vector<Point> > contours_poly(contours.size());//近似后的轮廓点集   
+//	vector<Rect> boundRect(contours.size()); //包围点集的最小矩形vector    
+////	vector<Point2f>center(contours.size());//包围点集的最小圆形vector   
+////	vector<float>radius(contours.size());//包围点集的最小圆形半径vector   
+//
+//	for (int i = 0; i < contours.size(); i++)
+//	{
+//		approxPolyDP(Mat(contours[i]), contours_poly[i], 3, true);//对多边形曲线做适当近似，contours_poly[i]是输出的近似点集  
+//		boundRect[i] = boundingRect(Mat(contours_poly[i]));//计算并返回包围轮廓点集的最小矩形   
+////		minEnclosingCircle(contours_poly[i], center[i], radius[i]);//计算并返回包围轮廓点集的最小圆形及其半径  
+//	}
+//	Mat drawing = Mat::zeros(matRgb.size(), CV_8UC3);
+//	int count = 0;
+//	for (int i = 0; i < contours.size(); i++)
+//	{
+//		Rect rect = boundRect[i];
+//		//cout << rect<<endl;  
+//		//高宽比限制  
+//		float ratio = (float)rect.width / (float)rect.height;
+//		//轮廓面积       
+//		float Area = (float)rect.width * (float)rect.height;
+//		float dConArea = (float)contourArea(contours[i]);
+//		float dConLen = (float)arcLength(contours[i], 1);
+//		if (dConArea <400)
+//			continue;
+//		if (ratio>2 || ratio < 0.5)
+//			continue;
+//
+//		//进行圆筛选，通过四块的缺失像素比较  
+//		Mat roiImage;
+//		Mat_rgb_copy(rect).copyTo(roiImage);
+//		//imshow("MyWindow",roiImage);   
+//		Mat temp;
+//		copy(rect).copyTo(temp);
+//		//显示从场景图中提取出的标识，留着。  
+//		/*bool iscircle = picturetool.isCircle(roiImage, temp);
+//		cout << "circle:" << iscircle << endl;
+//		if (!iscircle)
+//		continue;*/
+//		//接下来是形状限制！这里检测圆形标志牌
+//		//float C = (4 * PI*dConArea) / (dConLen*dConLen);
+//		//if (C < 0.5)//利用圆度初步对形状进行筛选
+//		//	continue;
+//		//copy(rect).copyTo(roiImage);
+//		//*********svm*********  
+//		Mat temp2 = Mat::zeros(temp.size(), CV_8UC1);
+//		cvtColor(temp, temp2, CV_BGR2GRAY);
+//		//resize(temp2, temp2, Size(48, 48));  
+//		resize(temp2, temp2, Size(30, 30));//30*30=900  
+//		temp2 = temp2.reshape(0, 1);
+//		temp2.convertTo(temp2, CV_32F);
+//		//cout << temp2.size() << endl;
+//
+//		//int result = (int)classifier.predict(temp2) - 1;//svm预测  
+//		Scalar color = (0, 0, 255);//蓝色线画轮廓   
+//		drawContours(drawing, contours_poly, i, color, 1, 8, vector<Vec4i>(), 0, Point());
+//		rectangle(drawing, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
+//		rectangle(src, boundRect[i].tl(), boundRect[i].br(), color, 2, 8, 0);
+//		//putText(src, labelname[result], cvPoint(boundRect[i].x, boundRect[i].y - 10), 1, 1, CV_RGB(255, 0, 0), 2);//红色字体注释  
+//		//保存
+//		sprintf_s(path, "F:/picture/test/Test_Result/%d_%d.jpg", 0, count++);
+//		imwrite(path, src);//保存最终的检测识别结果
+//	}
+	waitKey(0);
+	destroyWindow("MyWindow");
 }
 
 int main()
 {
-	load_svm();
+	//load_svm();
 	//计算程序运行时间
 	clock_t start, finish;
 	double totaltime;
 	start = clock();
 	VideoTool videotool;
 	Picture_Tool picturetool;
+
 	//训练HOG+SVM
 	//char *train_path = Train_PATH;
 	//char *result_path = SVM_PATH;
 	//Train_SVM(train_path, result_path);
 
-	//char *path = "F:/picture/test/test5.jpg";
+	char *path = "F:/picture/FullIJCNN2013/00125.ppm";
+	char *path1 = "F:/picture/FullIJCNN2013/00002.ppm";
+	
+//	RGB2HSV_SVM_ONE(path, picturetool);
 	//saveNRGB(path);
-	//IplImage *testImg;
-	//testImg = cvLoadImage(path, CV_LOAD_IMAGE_UNCHANGED);
-	//cvShowImage("hahah", testImg);
-	//IplImage *img = picturetool.twoValueImage(testImg, 0.12);
+	IplImage *testImg,*histImg;
+	testImg = cvLoadImage(path);
+	cvShowImage("原图", testImg);
+	histImg = picturetool.EqualizeHistColorImage(testImg);
+	cvShowImage("均衡化", histImg);
+	IplImage *img = picturetool.NormalizeImage(histImg);
+	cvShowImage("归一化后图", img);
+	//Mat Img1;
+	//Img1 = cvarrToMat(img);
+	IplImage *img1 = picturetool.twoValueImage(img, 0.12);
+	cvShowImage("RGBN", img1);
 	//char *path = VIDEO_PATH;
 	//int count = videotool.playVideo(path, picturetool);
 	//cout << "count " << count << endl;
@@ -368,13 +541,62 @@ int main()
 	//cvShowImage("erzhitu",img);
 	//识别单张图片
 	//HOG_SVM_Recog(path);
-	char *test_path = Test_PATH;
+	//char *test_path = Test_PATH;
 	//识别多张图片
 	//HOG_SVM_MulRecog(test_path);
-	//waitKey(0);
+	waitKey(0);
 	//test(path);
+	
 	finish = clock();
 	totaltime = (double)(finish - start) / CLOCKS_PER_SEC;
 	cout << "\n此程序的运行时间为" << totaltime << "秒！" << endl;
 	return 0;
+}
+void Hough()
+{
+	int kvalue = 15;
+	Mat src_color = imread("F:/picture/test/test.jpg");//读取原彩色图
+	imshow("原图-彩色", src_color);
+
+	//声明一个三通道图像，像素值全为0，用来将霍夫变换检测出的圆画在上面
+	Mat dst(src_color.size(), src_color.type());
+	dst = Scalar::all(0);
+
+	Mat src_gray;//彩色图像转化成灰度图
+	cvtColor(src_color, src_gray, COLOR_RGB2GRAY);
+	imshow("原图-灰度", src_gray);
+	//imwrite("src_gray.png", src_gray);
+
+	Mat bf;//对灰度图像进行双边滤波
+	bilateralFilter(src_gray, bf, kvalue, kvalue * 2, kvalue / 2);
+	//imshow("灰度双边滤波处理", bf);
+	//imwrite("src_bf.png", bf);
+
+	Mat canSrc;//对灰度图像进行双边滤波
+	Canny(bf, canSrc, 10, 250, 5);
+	imshow("canny", canSrc);
+
+	bilateralFilter(canSrc, dst, kvalue, kvalue * 2, kvalue / 2);
+	vector<Vec3f> circles;//声明一个向量，保存检测出的圆的圆心坐标和半径
+	//    HoughCircles(canSrc, circles, CV_HOUGH_GRADIENT, 1.5, 100, 130, 38, 20, 100);//霍夫变换检测圆
+	HoughCircles(canSrc, circles, CV_HOUGH_GRADIENT, 1.5, 100, 130, 38, 20, 300);//霍夫变换检测圆
+
+	cout << circles.size() << endl;
+	cout << "x=\ty=\tr=" << endl;
+	for (size_t i = 0; i < circles.size(); i++)//把霍夫变换检测出的圆画出来
+	{
+		Point center(cvRound(circles[i][0]), cvRound(circles[i][1]));
+		int radius = cvRound(circles[i][2]);
+
+		circle(dst, center, 0, Scalar(0, 255, 0), -1, 8, 0);
+		circle(dst, center, radius, Scalar(255, 255, 255), 1, 8, 0);
+
+		cout << cvRound(circles[i][0]) << "\t" << cvRound(circles[i][1]) << "\t"
+			<< cvRound(circles[i][2]) << endl;//在控制台输出圆心坐标和半径               
+	}
+	//dilate(canSrc, dst,getStructuringElement(MORPH_ELLIPSE,Size(5,5)));
+	imshow("特征提取", dst);
+	//imwrite("dst.png", dst);
+
+	waitKey();
 }

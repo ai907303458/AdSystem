@@ -16,9 +16,10 @@ class Picture_Tool
 public:
 	void showNRGB(char *path);
 	void saveNRGB(char *spath, char *tpath);
+	IplImage* EqualizeHistColorImage(IplImage *pImage);
 	IplImage* NormalizeImage(IplImage *img);
 	IplImage* twoValueImage(IplImage *img, int threshold);
-	int two(int R, int G,int B);
+	double two(double R, double G, double B);
 	void RGB2HSV(double red, double green, double blue, double& hue, double& saturation, double& intensity);
 	void FillHole(const Mat srcBw, Mat &dstBw);
 	bool Picture_Tool::isCircle(const Mat srcBw, Mat& mytemp);

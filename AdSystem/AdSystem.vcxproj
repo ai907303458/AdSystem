@@ -22,6 +22,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v120</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>Dynamic</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -83,11 +84,16 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Picture_Tool.cpp" />
+    <ClCompile Include="test.cpp" />
     <ClCompile Include="Video_Tool.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ini_File.h" />
     <ClInclude Include="Picture_Tool.h" />
     <ClInclude Include="Video_Tool.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="FilePath.ini" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

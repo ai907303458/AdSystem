@@ -1,6 +1,5 @@
 #include "Picture_Tool.h"
 
-
 void Picture_Tool::showNRGB(char *path)
 {
 	IplImage *img;
@@ -20,12 +19,36 @@ void Picture_Tool::saveNRGB(char *spath, char *tpath)
 	cvSaveImage(tpath, NormalizeImage(img));
 	cvReleaseImage(&img);
 }
+//彩色图像的直方图均衡化  
+IplImage* Picture_Tool::EqualizeHistColorImage(IplImage *pImage)
+{
+	IplImage *pEquaImage = cvCreateImage(cvGetSize(pImage), pImage->depth, 3);
 
+	// 原图像分成各通道后再均衡化,最后合并即彩色图像的直方图均衡化  
+	const int MAX_CHANNEL = 4;
+	IplImage *pImageChannel[MAX_CHANNEL] = { NULL };
+
+	int i;
+	for (i = 0; i < pImage->nChannels; i++)
+		pImageChannel[i] = cvCreateImage(cvGetSize(pImage), pImage->depth, 1);
+
+	cvSplit(pImage, pImageChannel[0], pImageChannel[1], pImageChannel[2], pImageChannel[3]);
+
+	for (i = 0; i < pImage->nChannels; i++)
+		cvEqualizeHist(pImageChannel[i], pImageChannel[i]);
+
+	cvMerge(pImageChannel[0], pImageChannel[1], pImageChannel[2], pImageChannel[3], pEquaImage);
+
+	for (i = 0; i < pImage->nChannels; i++)
+		cvReleaseImage(&pImageChannel[i]);
+
+	return pEquaImage;
+}
 IplImage* Picture_Tool::NormalizeImage(IplImage *img)
 {
 	//1创建归一化的图像
 	IplImage* imgavg = cvCreateImage(cvGetSize(img), 8, 3);
-
+	
 	//2获取图像高度和宽度信息，设置epslon的目的是防止除0的操作产生；
 	int width = img->width;
 	int height = img->height;
@@ -37,12 +60,12 @@ IplImage* Picture_Tool::NormalizeImage(IplImage *img)
 		for (int x = 0; x < width; x++) {
 
 			CvScalar src = cvGet2D(img, y, x);
-			redValue = src.val[0];
+			redValue = src.val[2];
 			greenValue = src.val[1];
-			blueValue = src.val[2];
+			blueValue = src.val[0];
 			// 加上epslon，为了防止除以0的情况发生
 			sum = redValue + greenValue + blueValue + epslon;
-			CvScalar des = cvScalar(redValue / sum * 255, greenValue / sum * 255, blueValue / sum * 255, src.val[4]);
+			CvScalar des = cvScalar(blueValue / sum * 255, greenValue / sum * 255, redValue / sum * 255, src.val[4]);
 			cvSet2D(imgavg, y, x, des);
 
 		}
@@ -55,43 +78,66 @@ IplImage* Picture_Tool::NormalizeImage(IplImage *img)
 
 IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
 	//1创建归一化的图像
-	IplImage* imgavg = cvCreateImage(cvGetSize(img), IPL_DEPTH_8U, 1);
-	cvCvtColor(img, imgavg, CV_RGB2GRAY);
-	/*cvShowImage("test",imgavg);
-	cvWaitKey(0);*/
+	IplImage* imgavg = cvCreateImage(cvGetSize(img), 8, 3);
+	//cvCvtColor(img, imgavg, CV_RGB2GRAY);
+	//cvShowImage("test", imgavg);
 	//2获取图像高度和宽度信息，设置epslon的目的是防止除0的操作产生；
 	int width = img->width;
 	int height = img->height;
 	int redValue, greenValue, blueValue;
 
 	//3计算归一化的结果，并替换掉原像素值；
+	double fr = 0.0, fb = 0.0;
 	uchar* piexl = new uchar;
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {
 
 			CvScalar src = cvGet2D(img, y, x);
-			redValue = src.val[0];
+			redValue = src.val[2];
 			greenValue = src.val[1];
-			blueValue = src.val[2];
-			double fred = two(redValue, greenValue, blueValue);
-			double fblue = two(blueValue, greenValue, redValue);
-			if (fred>0.12||fblue>0.18){
-				
-				((uchar *)(imgavg->imageData + y*imgavg->widthStep))[x] = 255;
+			blueValue = src.val[0];
+			fr = two(redValue, greenValue, blueValue);
+			if (fr>0.12){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
 			}
+			//cout << redValue << " " << greenValue << " " << blueValue << endl;
+			//归一化阈值分割红色
+			/*if (redValue>102 && greenValue<76.5){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}*/
+			//归一化阈值分割蓝色
+			/*if (blueValue>102){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}*/
+			//RGB差分阈值分割红色
+			/*if (redValue - greenValue>20.4 && redValue - blueValue>20.4){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}*/
+			//RGB差分阈值分割蓝色
+			/*if (blueValue - greenValue>2.55 && blueValue-redValue >2.55){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}*/
 			else{
-				((uchar*)(imgavg->imageData + y*imgavg->widthStep))[x] = 0;
-			}
+					CvScalar des = cvScalar(0, 0, 0, src.val[4]);
+					cvSet2D(imgavg, y, x, des);	
+				}
+			
 		}
 	}
 	//cvSaveImage("gray.jpg", imgavg);
 	////4返回归一化后的图像；
 	return imgavg;
 }
-int Picture_Tool::two(int x, int y, int z){
-	int sum = x + y + z;
-	return max(0, min(x - y, x - z) / sum);
+double Picture_Tool::two(double x, double y, double z){
+	double sum = x + y + z;
+	return __max(0, __min(x - y, x - z) / sum);
 }
+
 /*
 将图片从RGB转到HSV颜色空间
 */
