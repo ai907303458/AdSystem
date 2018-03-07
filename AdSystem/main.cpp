@@ -518,21 +518,22 @@ int main()
 	//char *result_path = SVM_PATH;
 	//Train_SVM(train_path, result_path);
 
-	char *path = "F:/picture/FullIJCNN2013/00125.ppm";
+	char *path = "F:/picture/Tsinghua-Tencent/data/test/394.jpg";
+	char *blue = "F:/picture/Tsinghua-Tencent/data/test/2105.jpg";
 	char *path1 = "F:/picture/FullIJCNN2013/00002.ppm";
 	
 //	RGB2HSV_SVM_ONE(path, picturetool);
 	//saveNRGB(path);
 	IplImage *testImg,*histImg;
-	testImg = cvLoadImage(path);
+	testImg = cvLoadImage(blue);
 	cvShowImage("原图", testImg);
+
 	histImg = picturetool.EqualizeHistColorImage(testImg);
-	cvShowImage("均衡化", histImg);
+	//cvShowImage("均衡化", histImg);
 	IplImage *img = picturetool.NormalizeImage(histImg);
-	cvShowImage("归一化后图", img);
-	//Mat Img1;
-	//Img1 = cvarrToMat(img);
-	IplImage *img1 = picturetool.twoValueImage(img, 0.12);
+	//cvShowImage("归一化后图", img);
+	
+	IplImage *img1 = picturetool.twoValueImage(img, 2);
 	cvShowImage("RGBN", img1);
 	//char *path = VIDEO_PATH;
 	//int count = videotool.playVideo(path, picturetool);
@@ -544,6 +545,7 @@ int main()
 	//char *test_path = Test_PATH;
 	//识别多张图片
 	//HOG_SVM_MulRecog(test_path);
+
 	waitKey(0);
 	//test(path);
 	

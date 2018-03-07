@@ -75,8 +75,13 @@ IplImage* Picture_Tool::NormalizeImage(IplImage *img)
 	return imgavg;
 }
 
-
-IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
+/*
+1归一化阈值分割红色
+2归一化阈值分割蓝色
+3RGB差分阈值分割红色
+4RGB差分阈值分割蓝色
+*/
+IplImage* Picture_Tool::twoValueImage(IplImage *img,int type){
 	//1创建归一化的图像
 	IplImage* imgavg = cvCreateImage(cvGetSize(img), 8, 3);
 	//cvCvtColor(img, imgavg, CV_RGB2GRAY);
@@ -96,11 +101,38 @@ IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
 			redValue = src.val[2];
 			greenValue = src.val[1];
 			blueValue = src.val[0];
-			fr = two(redValue, greenValue, blueValue);
-			if (fr>0.12){
+			//fr = two(redValue, greenValue, blueValue);
+			if (1 == type&&redValue>102 && greenValue<76.5){
 				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
 				cvSet2D(imgavg, y, x, des);
+				continue;
 			}
+			
+			else if (2 == type&&blueValue>102){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+				continue;
+			}
+			
+			else if (3 == type&&redValue - greenValue>20.4 && redValue - blueValue>20.4){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+				continue;
+			}
+			else if (4 == type&&blueValue - greenValue>2.55 && blueValue - redValue >2.55){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+				continue;
+			}
+			else{
+				CvScalar des = cvScalar(0, 0, 0, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}
+			
+			/*if (fr>0.12){
+				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			}*/
 			//cout << redValue << " " << greenValue << " " << blueValue << endl;
 			//归一化阈值分割红色
 			/*if (redValue>102 && greenValue<76.5){
@@ -122,10 +154,7 @@ IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
 				CvScalar des = cvScalar(255, 255, 255, src.val[4]);
 				cvSet2D(imgavg, y, x, des);
 			}*/
-			else{
-					CvScalar des = cvScalar(0, 0, 0, src.val[4]);
-					cvSet2D(imgavg, y, x, des);	
-				}
+			
 			
 		}
 	}
@@ -136,6 +165,41 @@ IplImage* Picture_Tool::twoValueImage(IplImage *img,int threshold){
 double Picture_Tool::two(double x, double y, double z){
 	double sum = x + y + z;
 	return __max(0, __min(x - y, x - z) / sum);
+}
+IplImage* Picture_Tool::grayImpImage(IplImage *img){
+	//1创建归一化的图像
+	IplImage* imgavg = cvCreateImage(cvGetSize(img), 8, 3);
+	//cvCvtColor(img, imgavg, CV_RGB2GRAY);
+	//cvShowImage("test", imgavg);
+	//2获取图像高度和宽度信息，设置epslon的目的是防止除0的操作产生；
+	int width = img->width;
+	int height = img->height;
+	int redValue, greenValue, blueValue;
+
+	//3计算归一化的结果，并替换掉原像素值；
+	double fr = 0.0, fb = 0.0,fc=0.0;
+	uchar* piexl = new uchar;
+	for (int y = 0; y < height; y++) {
+		for (int x = 0; x < width; x++) {
+
+			CvScalar src = cvGet2D(img, y, x);
+			redValue = src.val[2];
+			greenValue = src.val[1];
+			blueValue = src.val[0];
+			fr = adance(redValue, greenValue, blueValue);
+			
+				CvScalar des = cvScalar(fr*255, 0, 0, src.val[4]);
+				cvSet2D(imgavg, y, x, des);
+			
+		}
+	}
+	return imgavg;
+
+	
+}
+double Picture_Tool::adance(double x, double y, double z){
+	double sum = x + y + z;
+	return __min(0, __min((x - y)/sum,(x - z)/sum));
 }
 
 /*
